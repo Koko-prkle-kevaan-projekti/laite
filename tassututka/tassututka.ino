@@ -28,6 +28,7 @@ gpsPaalle();
 // AT+CGNSPWR=1;+CGNSCMD=0,"$PMTK314,8,8,8,8,8,8,0,0,0,0,0,0,0,0,0,0,0*28";+CGNSTST=1;
 // AT+CFUN=0 tai 1 tai 4 0=minimum functionality 1=full functionality defaul 4 = flightmode disable RF
 // muokkaus :) 
+// testi
 
 }
 
