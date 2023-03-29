@@ -58,3 +58,5 @@ GSMSerial.println("AT+CFUN=0");
 delay(1000);
 GSMSerial.println("AT+CGNSPWR=1");
 }
+
+turha rivi
