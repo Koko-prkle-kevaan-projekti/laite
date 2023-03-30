@@ -31,7 +31,7 @@ bool g_every_16_s = false;  // This flag is turned on every 16 seconds.
 ISR(TIMER1_COMPA_vect) {
   static unsigned int counter = 0;
   counter++;
-  if (!(counter%g_every16_s))
+  if (g_every_16_s && !(counter % 16))
     g_every_16_s = true;
 }
 
