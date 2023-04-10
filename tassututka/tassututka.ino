@@ -5,20 +5,25 @@
 /***************************************************************************************/
 
 #include <SoftwareSerial.h>
+#include "tassudata.h"
+#include "settings.h"
+
 SoftwareSerial GSMSerial(7, 8);
 int Powerkey = 9;
 
 void setup()
 {
   pinMode(Powerkey, OUTPUT);    // initialize the digital pin as an output.
-  virratPaalle();
+  powerOnSIM808 ();
   GSMSerial.begin(19200);       // the GPRS/GSM baud rate
   Serial.begin(9600);           // the GPRS/GSM baud rate
-  gpsPaalle();
+  enableGPS();
+  enableGPRS();
+
 
               /* 
               SIM900.begin(19200);  //SIM900 serial communication is starting whit 19200 of baudrate speed
-              AT+CGNSPWR=1
+              powerOnSIM808 
               AT+CGNSINF
               AT+CGPSSTATUS?
               AT+CGPSOUT=32
@@ -61,14 +66,14 @@ void loop()
   Serial.print((char)GSMSerial.read());
 }
 
-void virratPaalle(void)
+void powerOnSIM808(void) 
 {
   digitalWrite(Powerkey, LOW);
   delay(500);
   digitalWrite(Powerkey, HIGH);
 }
 
-void gpsPaalle()
+void enableGPS() 
 {
   delay(1000);
   GSMSerial.println("AT");
@@ -76,4 +81,10 @@ void gpsPaalle()
   GSMSerial.println("AT+CFUN=0");
   delay(1000);
   GSMSerial.println("AT+CGNSPWR=1");
+}
+
+void enableGPRS()
+{
+  
+
 }
