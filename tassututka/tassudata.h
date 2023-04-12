@@ -1,8 +1,10 @@
+#include <SoftwareSerial.h>
+
 #ifndef TASSUDATA_SEND_H
 #define TASSUDATA_SEND_H
 
 // Connect to server
-bool connect(char* ipAddress, int ipAddressLength);
+bool connect(SoftwareSerial & swSerial, char* ipAddress);
 
 
 // GPS Data Handling
