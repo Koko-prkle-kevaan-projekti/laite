@@ -15,8 +15,9 @@ void setup()
 {
   pinMode(Powerkey, OUTPUT);    // initialize the digital pin as an output.
   powerOnSIM808 ();
-  gpsSerial.begin(19200);
+  gpsSerial.begin(9600);
   Serial.begin(9600);
+  Serial.println("Starting now.");
   enableGPS();
   connect(gpsSerial, SERVER_IP_ADDRESS);
 
