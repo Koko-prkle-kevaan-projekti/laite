@@ -5,6 +5,7 @@
 // AT Command Helper 
 // sends command into the serial and waits for the response
 int atCommandHelper(SoftwareSerial & swSerial, char* ATcommand, char* ATresponse1, char* ATresponse2, unsigned long timeout) {
+    Serial.println("AT Command");
     while (swSerial.available() > 0) {
         swSerial.read();
     }
@@ -35,23 +36,32 @@ int atCommandHelper(SoftwareSerial & swSerial, char* ATcommand, char* ATresponse
         }
 
     } while ((answer == 0) && ((millis() - start) < timeout));
-
+    Serial.println("ERROR: Timeout");
+    Serial.println(response);
     return answer; 
 }
 
 // Connect to server
 bool connect(SoftwareSerial & swSerial, char* ipAddress) {
-    // connecting to the network 
-    while (atCommandHelper(swSerial, "AT+CREG?", "+CREG: 0,1", "+CREG: 0,5", 1000) == 0);
-
-    // setting up single-IP connection mode
-    if (atCommandHelper(swSerial, "AT+CIPMUX=0", "OK", "ERROR", 1000) == 2) {
-        Serial.println("ERROR: Could not set single-IP connection mode");
+    // checks if PIN code is required
+    if (atCommandHelper(swSerial, "AT+CPIN?", "READY", "ERROR", 3000) != 1) {
+        Serial.println("ERROR: cannot initialize SIM card");
         return false;
     }
 
+    // connecting to the network 
+    Serial.println("Network connection");
+    while (atCommandHelper(swSerial, "AT+CREG?", "+CREG: 0,1", "+CREG: 0,5", 1000) == 0);
+
+    // setting up single-IP connection mode
+    if (atCommandHelper(swSerial, "AT+CIPMUX=0", "OK", "ERROR", 1000) != 1) {
+        Serial.println("ERROR: Could not set single-IP connection mode");
+        return false;
+    }
     // gets current connection status
     while (atCommandHelper(swSerial, "AT+CIPSTATUS", "INITIAL", "", 500) == 0);
+
+
 
     return true;
 }
