@@ -1,6 +1,7 @@
 #include <HardwareSerial.h>     // for Serial
 #include <Arduino.h>     // for millis() 
 #include "tassudata.h"
+#include "settings.h"
 
 // AT Command Helper 
 // sends command into the serial and waits for the response
@@ -58,15 +59,89 @@ bool connect(SoftwareSerial & swSerial, char* ipAddress) {
         Serial.println("ERROR: Could not set single-IP connection mode");
         return false;
     }
-    // gets current connection status
+    // gets current connection status IP INITIAL
     while (atCommandHelper(swSerial, "AT+CIPSTATUS", "INITIAL", "", 500) == 0);
 
+    // sets the APN, username and pw 
+    // todo if necessary
 
+    // Waits for status IP START
+	while (atCommandHelper(swSerial, "AT+CIPSTATUS", "START", "", 500) == 0);
+	delay(5000);
+
+    // Brings Up Wireless Connection with GPRS
+	if (atCommandHelper(swSerial, "AT+CIICR", "OK", "ERROR", 30000) != 1) {
+        Serial.println("ERROR: Did not success with Wireles connection (GPRS)");
+        return false;
+    }
+
+    // Waits for status. GPRRACT means that it has approved commands before it
+    while (atCommandHelper(swSerial, "AT+CIPSTATUS", "GPRSACT", "", 500) == 0);
+    delay(5000);
+
+    // Gets Local IP Address
+    if (atCommandHelper(swSerial, "AT+CIFSR", ".", "ERROR", 10000) != 1) {
+        Serial.println("ERROR: Couldn't find local IP Address.");
+        return false;
+    } 
+
+    // Waits for status IP STATUS
+    while (atCommandHelper(swSerial, "AT+CIPSTATUS", "IP STATUS", "", 500) == 0);
+    delay(5000);
+    Serial.println("Openning TCP");
+
+
+    char tcpSocketCommand [100] = {'\0'};
+    strcat (tcpSocketCommand, "AT+CIPSTART=\"TCP\",\"");
+    strcat (tcpSocketCommand, SERVER_IP_ADDRESS);
+    strcat (tcpSocketCommand, "\",\"65000\"");
+    
+    // Opens a TCP socket
+    if (atCommandHelper(swSerial, tcpSocketCommand, "CONNECT OK", "CONNECT FAIL", 30000) != 1) {
+        Serial.println("ERROR: Could'nt open up TCP Socket.");
+    }
+    
+    Serial.println("Connected, well done!");
 
     return true;
 }
 
 // GPS Data Handling
-bool sendGPSData(char* deviceName, int deviceNameLength, char* gpsData, int gpsDataLength) {
-    return false;
+bool sendGPSData(SoftwareSerial & swSerial, char* deviceName, char* gpsData) {
+    
+    char sendDataCommand [50];
+    char data [100] = {'\0'};
+    strcat (data, deviceName);
+    strcat (data, ":");
+    strcat (data, gpsData);
+    // Sends some data to the TCP socket
+    sprintf(sendDataCommand, "AT+CIPSEND=%d", strlen (data));
+    if (atCommandHelper(swSerial, sendDataCommand, ">", "ERROR", 10000) == 1)
+    {
+        atCommandHelper(swSerial, data, "SEND OK", "ERROR", 10000);
+    } else {
+        Serial.println("ERROR: Couldn't send data to socket.");
+        return false;
+    }
+    
+    return true;
 }
+
+/*COMMANDS AND SOME INFO
+  Serial1 is using pins 18 and 19 
+
+  GSMSerial.println(" AT+CMEE=1");
+  AT+CGNSPWR=1       // power on GPS
+  AT+CGNSINF       // asks for gnss info
+  AT+CGPSSTATUS?    // connection status
+    4 responses; loc unknown, not fixed, 2d, 3d < 2d or 3d response next one 32
+  AT+CGPSOUT=32     // cordinates
+
+  AT+CGPSOUT=0    // no  cordinates
+  AT+CGPSRST=0    //
+  AT+CGNSTST=1    //
+  AT+CCLK?       //
+  AT+CFUN=0 or 1 or 4 // 0=minimum functionality 1=full functionality defaul 4 = flightmode disable RF
+  AT+COPS     //
+
+*/

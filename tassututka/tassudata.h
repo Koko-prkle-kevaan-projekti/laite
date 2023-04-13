@@ -8,7 +8,7 @@ bool connect(SoftwareSerial & swSerial, char* ipAddress);
 
 
 // GPS Data Handling
-bool sendGPSData(char* deviceName, int deviceNameLength, char* gpsData, int gpsDataLength);
+bool sendGPSData(SoftwareSerial & swSerial, char* deviceName, char* gpsData);
 
 
 #endif
