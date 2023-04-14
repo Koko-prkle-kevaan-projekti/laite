@@ -10,10 +10,8 @@ int atCommandHelper(SoftwareSerial & swSerial, char* ATcommand, char* ATresponse
 // Connect to server
 bool connect(SoftwareSerial & swSerial, char* ipAddress);
 
-
 // GPS Data Handling
 bool sendGPSData(SoftwareSerial & swSerial, char* deviceName, char* gpsData);
-
 
 #endif
 

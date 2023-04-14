@@ -52,7 +52,6 @@ bool connect(SoftwareSerial & swSerial, char* ipAddress) {
         return false;
     }
 
-
     if (atCommandHelper(swSerial, "AT+CREG=1", "OK", "", 1000) != 1) {
         Serial.println("ERROR: Network registration error or timeout.");
     }
@@ -146,19 +145,11 @@ bool sendGPSData(SoftwareSerial & swSerial, char* deviceName, char* gpsData) {
 }
 
 /*COMMANDS AND SOME INFO
-  Serial1 is using pins 18 and 19 
-
-  GSMSerial.println(" AT+CMEE=1");
-  AT+CGNSPWR=1       // power on GPS
-
 
   AT+CGNSINF       // asks for gnss info
-
   AT+CGPSSTATUS?    // connection status
-
     4 responses; loc unknown, not fixed, 2d, 3d < 2d or 3d response next one 32
   AT+CGPSOUT=32     // cordinates
-
   AT+CGPSOUT=0    // no  cordinates
   AT+CGPSRST=0    //
   AT+CGNSTST=1    //
