@@ -14,11 +14,7 @@
   SoftwareSerial gpsSerial(7, 8); // RX, TX *UNO 7,8 tai 10, 11 ? 
 #endif
 
-//SoftwareSerial gpsSerial(12, 13); // RX, TX *UNO 7,8 *MEGA 12, 13
 //SoftwareSerial ffuzzSerial(3, -1); // feather fuzz RX, TX (3, -1 OR 3, 1)
-
-// Compiles with MEGA. If you want to use UNO instead, uncomment next line: 
-// SoftwareSerial Serial1(10, 11); // RX, TX
 
 int Powerkey = 9;
 
@@ -45,6 +41,7 @@ void loop()
 {
 
   connect(gpsSerial, SERVER_IP_ADDRESS);
+
  /* if(Serial.available())
   gpsSerial.print((char)Serial.read());
 
