@@ -8,7 +8,13 @@
 #include "tassudata.h"
 #include "settings.h"
 
-SoftwareSerial gpsSerial(12, 13); // RX, TX *UNO 7,8 *MEGA 12, 13
+#if ((defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)))
+  SoftwareSerial gpsSerial(12, 13); // MEGA 12, 13
+#else
+  SoftwareSerial gpsSerial(7, 8); // RX, TX *UNO 7,8 tai 10, 11 ? 
+#endif
+
+//SoftwareSerial gpsSerial(12, 13); // RX, TX *UNO 7,8 *MEGA 12, 13
 //SoftwareSerial ffuzzSerial(3, -1); // feather fuzz RX, TX (3, -1 OR 3, 1)
 
 // Compiles with MEGA. If you want to use UNO instead, uncomment next line: 
@@ -21,20 +27,24 @@ int Powerkey = 9;
 // If this goes well, then we might be able to get back to earlier stage with gprs 
 void setup()
 {
+
   pinMode(Powerkey, OUTPUT);    // initialize the digital pin as an output.
   powerOnSIM808 ();
-  Serial.begin(115200);
-  Serial1.begin(9600);
+  Serial.begin(9600);
+  #if ((defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)))
+    Serial1.begin(9600);
+  #endif
   gpsSerial.begin(9600);
-  //ffuzzSerial.begin(9600);
+  //ffuzzSerial.begin(9600); 
   Serial.println("Starting now.");
-  enableGPS(); // <<
-  connect(gpsSerial, SERVER_IP_ADDRESS);
+  //enableGPS();  // commented off for a moment 
 
 }
 
 void loop()
 {
+
+  connect(gpsSerial, SERVER_IP_ADDRESS);
  /* if(Serial.available())
   gpsSerial.print((char)Serial.read());
 
@@ -84,23 +94,30 @@ void powerOnSIM808(void)
   digitalWrite(Powerkey, LOW);
   delay(500);
   digitalWrite(Powerkey, HIGH);
+
+  Serial.println("Wait for AT to be sent succesfully.");
+  while (atCommandHelper(gpsSerial, "AT", "OK", "", 2400) == 0);
+
 }
 
 void enableGPS() 
 {
-  delay(1000);
-
-// Serial printlines: with MEGA Serial1 instead of gpsSerial
-  Serial1.println("AT");
-  delay(4000);
-
-// FLIGHT MODE: for stabilizing the power. 
+  
+// FLIGHT MODE: 4 - for stabilizing the power. 
 // GPS works normally and doesnt break all the time because of all shit
-  Serial1.println("AT+CFUN=4"); 
-  delay(1000);
 
-  Serial1.println("AT+CGNSPWR=1");
-  delay(1000);
+// Phone functionality setup
+  if (atCommandHelper(gpsSerial, "AT+CFUN=1", "OK", "ERROR", 3000) != 1) {
+    Serial.println("ERROR: Phone functionality setup failed.");
+  }
+
+// Power on GNSS 
+    if (atCommandHelper(gpsSerial, "AT+CGNSPWR=1", "OK", "ERROR", 3600) != 1) {
+    Serial.println("ERROR: GNSS didn't start");
+  }
+
+//while (atCommandHelper(gpsSerial, "AT+CGNSINF", "OK", "", 1000) == 0);
+
 
 }
 

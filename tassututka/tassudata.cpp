@@ -7,6 +7,7 @@
 // sends command into the serial and waits for the response
 int atCommandHelper(SoftwareSerial & swSerial, char* ATcommand, char* ATresponse1, char* ATresponse2, unsigned long timeout) {
     Serial.println("AT Command");
+    Serial.println(ATcommand);
     while (swSerial.available() > 0) {
         swSerial.read();
     }
@@ -18,6 +19,7 @@ int atCommandHelper(SoftwareSerial & swSerial, char* ATcommand, char* ATresponse
     memset(response, ' ', 100);     // sets up a string as empty
 
     swSerial.println(ATcommand);
+    delay(100);
     unsigned long start = millis();
     
     do {
@@ -45,9 +47,14 @@ int atCommandHelper(SoftwareSerial & swSerial, char* ATcommand, char* ATresponse
 // Connect to server
 bool connect(SoftwareSerial & swSerial, char* ipAddress) {
     // checks if PIN code is required
-    if (atCommandHelper(swSerial, "AT+CPIN?", "READY", "ERROR", 3000) != 1) {
+    if (atCommandHelper(swSerial, "AT+CPIN?", "READY", "ERROR", 10000) != 1) {
         Serial.println("ERROR: cannot initialize SIM card");
         return false;
+    }
+
+
+    if (atCommandHelper(swSerial, "AT+CREG=1", "OK", "", 1000) != 1) {
+        Serial.println("ERROR: Network registration error or timeout.");
     }
 
     // connecting to the network 
@@ -62,8 +69,19 @@ bool connect(SoftwareSerial & swSerial, char* ipAddress) {
     // gets current connection status IP INITIAL
     while (atCommandHelper(swSerial, "AT+CIPSTATUS", "INITIAL", "", 500) == 0);
 
+
+    char connectAPN [40] = {'\0'};
+    strcat (connectAPN, "AT+CSTT=\"");
+    strcat (connectAPN, APN_CONNECTION);
+    strcat (connectAPN, "\",\"");
+    strcat (connectAPN, APN_USERNAME);
+    strcat (connectAPN, "\",\"");
+    strcat (connectAPN, APN_PASSWORD);
+    strcat (connectAPN, "\"");
     // sets the APN, username and pw 
-    // todo if necessary
+    if (atCommandHelper (swSerial, connectAPN, "OK", "ERROR", 30000) == 1) {
+        Serial.println("ERROR: Setting up APN Connection failed.");
+    }
 
     // Waits for status IP START
 	while (atCommandHelper(swSerial, "AT+CIPSTATUS", "START", "", 500) == 0);
@@ -132,8 +150,12 @@ bool sendGPSData(SoftwareSerial & swSerial, char* deviceName, char* gpsData) {
 
   GSMSerial.println(" AT+CMEE=1");
   AT+CGNSPWR=1       // power on GPS
+
+
   AT+CGNSINF       // asks for gnss info
+
   AT+CGPSSTATUS?    // connection status
+
     4 responses; loc unknown, not fixed, 2d, 3d < 2d or 3d response next one 32
   AT+CGPSOUT=32     // cordinates
 
