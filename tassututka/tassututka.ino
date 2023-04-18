@@ -21,9 +21,6 @@ SoftwareSerial ffuzzSerial(-1, 13);
 
 int Powerkey = 9;
 
-// WORK IN PROGRESS: Trying to automatize AT command functionalities with the device
-// so there's no need to apply commands by keyboard after all
-// If this goes well, then we might be able to get back to earlier stage with gprs 
 void setup()
 {
 
