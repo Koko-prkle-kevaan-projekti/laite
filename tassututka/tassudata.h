@@ -5,13 +5,21 @@
 
 // AT Command Helper 
 // sends command into the serial and waits for the response
-int atCommandHelper(SoftwareSerial & swSerial, char* ATcommand, char* ATresponse1, char* ATresponse2, unsigned long timeout);
+int atCommandHelper(Stream & serial, char* ATcommand, char* ATresponse1, char* ATresponse2, unsigned long timeout);
+
+// AT Command Response
+void atCommandResponse(Stream & serial, char* ATcommand, char* answer);
 
 // Connect to server
-bool connect(SoftwareSerial & swSerial, char* ipAddress);
+bool connect(Stream & serial, char* ipAddress);
 
 // GPS Data Handling
-bool sendGPSData(SoftwareSerial & swSerial, char* deviceName, char* gpsData);
+bool sendGPSData(Stream & serial, char* deviceName, char* gpsData);
+
+// Conncection check
+bool isConnected(Stream & serial);
+
+
 
 #endif
 

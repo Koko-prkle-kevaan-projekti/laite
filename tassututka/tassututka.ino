@@ -9,12 +9,15 @@
 #include "settings.h"
 
 #if ((defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)))
-  SoftwareSerial gpsSerial(12, 13); // MEGA 12, 13
+  bool wlan = true;
+  Stream & serial = Serial1; 
 #else
-  SoftwareSerial gpsSerial(7, 8); // RX, TX *UNO 7,8 tai 10, 11 ? 
+  bool wlan = false;
+  SoftwareSerial gpsSerial(7, 8); 
+  Stream & serial = gpsSerial;
 #endif
 
-//SoftwareSerial ffuzzSerial(3, -1); // feather fuzz RX, TX (3, -1 OR 3, 1)
+SoftwareSerial ffuzzSerial(-1, 13); 
 
 int Powerkey = 9;
 
@@ -25,96 +28,100 @@ void setup()
 {
 
   pinMode(Powerkey, OUTPUT);    // initialize the digital pin as an output.
-  powerOnSIM808 ();
   Serial.begin(9600);
   #if ((defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)))
     Serial1.begin(9600);
+    ffuzzSerial.begin(9600); 
+  #else
+    gpsSerial.begin(9600);
   #endif
-  gpsSerial.begin(9600);
-  //ffuzzSerial.begin(9600); 
+
+  powerOnSIM808 ();
   Serial.println("Starting now.");
-  //enableGPS();  // commented off for a moment 
+  enableGPS(); 
 
 }
 
 void loop()
 {
 
-  connect(gpsSerial, SERVER_IP_ADDRESS);
-
- /* if(Serial.available())
-  gpsSerial.print((char)Serial.read());
-
-  else if(gpsSerial.available())
-  Serial.print((char)gpsSerial.read());*/
-
-// Sends/prints to serial monitor / shield / other device etc.
-
-/*
+  if(wlan) {
     if (Serial.available()) {
-      char srl = Serial.read();
-
-      Serial1.print(srl); 
-      gpsSerial.print(srl); 
-      ffuzzSerial.print(srl); 
+      char data = Serial.read();
+      serial.print(data);      // Send to shield
+    }
+    if (serial.available()) {
+      char data = serial.read();
+      Serial.print(data);          // Print to serial monitor
+      ffuzzSerial.print(data);     // Send to other device
     }
 
-    if (Serial1.available()) {
-      char srl = Serial1.read();
+  } else {
+    if (isConnected(serial)) { 
+      delay(1000);
+      char gdata[100];
+      memset(gdata, ' ', 100); 
 
-      Serial.print(srl); 
-      gpsSerial.print(srl); 
-      ffuzzSerial.print(srl); 
+      int pos = 0;
+      while (serial.available()) {
+        gdata[pos] = serial.read();
+        pos++;
+      }
+
+      sendGPSData(serial, DEVICE_NAME, gdata);
+    } else {
+      connect(serial, SERVER_IP_ADDRESS);
     }
-      
-    if (gpsSerial.available()) {
-      char srl = gpsSerial.read();
+    
+  }
 
-      Serial.print(srl);     
-      Serial1.print(srl); 
-      ffuzzSerial.print(srl); 
-    }
-
-    if (ffuzzSerial.available()) {
-      char srl = ffuzzSerial.read();
-
-      Serial.print(srl);   
-      Serial1.print(srl); 
-      gpsSerial.print(srl); 
-    }
-    */
-      
 }
 
 void powerOnSIM808(void) 
 {
+
   digitalWrite(Powerkey, LOW);
   delay(500);
   digitalWrite(Powerkey, HIGH);
-
+  delay(4000);
   Serial.println("Wait for AT to be sent succesfully.");
-  while (atCommandHelper(gpsSerial, "AT", "OK", "", 2400) == 0);
+  delay(4000);
+  while (atCommandHelper(serial, "AT", "OK", "", 2500) == 0);
 
 }
 
 void enableGPS() 
 {
-  
+
+/*COMMANDS AND SOME INFO
+  AT+CGNSINF       // asks for gnss info
+  AT+CGPSSTATUS?    // connection status
+    4 responses; loc unknown, not fixed, 2d, 3d < 2d or 3d response next one 32
+  AT+CGPSOUT=32     // cordinates
+  AT+CGPSOUT=0    // no  cordinates
+  AT+CGPSRST=0    //
+  AT+CGNSTST=1    //
+  AT+CCLK?       //
+  AT+CFUN=0 or 1 or 4 // 0=minimum functionality 1=full functionality defaul 4 = flightmode disable RF
+  AT+COPS     //
+*/
+
 // FLIGHT MODE: 4 - for stabilizing the power. 
 // GPS works normally and doesnt break all the time because of all shit
 
-// Phone functionality setup
-  if (atCommandHelper(gpsSerial, "AT+CFUN=1", "OK", "ERROR", 3000) != 1) {
-    Serial.println("ERROR: Phone functionality setup failed.");
+// Waiting for phone functionality to be done
+  while (atCommandHelper(serial, "AT+CFUN=1", "OK", "ERROR", 3000) != 1);
+
+// Waiting for power on GNSS to be accepted
+  while (atCommandHelper(serial, "AT+CGNSPWR=1", "OK", "ERROR", 3500) != 1);
+
+// GPS Status check
+  while (atCommandHelper(serial, "AT+CGPSSTATUS?", "2D", "3D", 2500) == 0);
+  Serial.println("GPS Status OK");
+
+// Cordinates out
+  if (atCommandHelper(serial, "AT+CGPSOUT=32", "OK", "", 2000) != 1) {
+    Serial.println("ERROR: No cordinates");
   }
-
-// Power on GNSS 
-    if (atCommandHelper(gpsSerial, "AT+CGNSPWR=1", "OK", "ERROR", 3600) != 1) {
-    Serial.println("ERROR: GNSS didn't start");
-  }
-
-//while (atCommandHelper(gpsSerial, "AT+CGNSINF", "OK", "", 1000) == 0);
-
 
 }
-

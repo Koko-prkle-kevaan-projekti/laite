@@ -1,15 +1,15 @@
 #include <HardwareSerial.h>     // for Serial
-#include <Arduino.h>     // for millis() 
+#include <Arduino.h>       // for millis() 
 #include "tassudata.h"
 #include "settings.h"
 
 // AT Command Helper 
 // sends command into the serial and waits for the response
-int atCommandHelper(SoftwareSerial & swSerial, char* ATcommand, char* ATresponse1, char* ATresponse2, unsigned long timeout) {
-    Serial.println("AT Command");
+int atCommandHelper(Stream & serial, char* ATcommand, char* ATresponse1, char* ATresponse2, unsigned long timeout) {
+    Serial.println("AT Command:");
     Serial.println(ATcommand);
-    while (swSerial.available() > 0) {
-        swSerial.read();
+    while (serial.available() > 0) {
+        serial.read();
     }
 
     uint8_t pos = 0;
@@ -18,13 +18,13 @@ int atCommandHelper(SoftwareSerial & swSerial, char* ATcommand, char* ATresponse
     
     memset(response, ' ', 100);     // sets up a string as empty
 
-    swSerial.println(ATcommand);
+    serial.println(ATcommand);
     delay(100);
     unsigned long start = millis();
     
     do {
-        if (swSerial.available() != 0) {
-            response[pos] = swSerial.read();
+        if (serial.available() != 0) {
+            response[pos] = serial.read();
             pos++;
             
             // strstr checks if response contains ATresponse1 
@@ -44,30 +44,38 @@ int atCommandHelper(SoftwareSerial & swSerial, char* ATcommand, char* ATresponse
     return answer; 
 }
 
+void atCommandResponse(Stream & serial, char *ATcommand, char *answer)
+{
+    Serial.println("AT Command");
+    Serial.println(ATcommand);
+    while (serial.available() > 0) {
+        serial.read();
+    }
+}
+
 // Connect to server
-bool connect(SoftwareSerial & swSerial, char* ipAddress) {
+bool connect(Stream & serial, char* ipAddress) {
     // checks if PIN code is required
-    if (atCommandHelper(swSerial, "AT+CPIN?", "READY", "ERROR", 10000) != 1) {
+    if (atCommandHelper(serial, "AT+CPIN?", "READY", "ERROR", 10000) != 1) {
         Serial.println("ERROR: cannot initialize SIM card");
         return false;
     }
 
-    if (atCommandHelper(swSerial, "AT+CREG=1", "OK", "", 1000) != 1) {
+    if (atCommandHelper(serial, "AT+CREG=1", "OK", "", 1000) != 1) {
         Serial.println("ERROR: Network registration error or timeout.");
     }
 
     // connecting to the network 
     Serial.println("Network connection");
-    while (atCommandHelper(swSerial, "AT+CREG?", "+CREG: 0,1", "+CREG: 0,5", 1000) == 0);
+    while (atCommandHelper(serial, "AT+CREG?", "+CREG: 0,1", "+CREG: 0,5", 1000) == 0);
 
     // setting up single-IP connection mode
-    if (atCommandHelper(swSerial, "AT+CIPMUX=0", "OK", "ERROR", 1000) != 1) {
+    if (atCommandHelper(serial, "AT+CIPMUX=0", "OK", "ERROR", 1000) != 1) {
         Serial.println("ERROR: Could not set single-IP connection mode");
         return false;
     }
     // gets current connection status IP INITIAL
-    while (atCommandHelper(swSerial, "AT+CIPSTATUS", "INITIAL", "", 500) == 0);
-
+    while (atCommandHelper(serial, "AT+CIPSTATUS", "INITIAL", "", 500) == 0);
 
     char connectAPN [40] = {'\0'};
     strcat (connectAPN, "AT+CSTT=\"");
@@ -78,35 +86,34 @@ bool connect(SoftwareSerial & swSerial, char* ipAddress) {
     strcat (connectAPN, APN_PASSWORD);
     strcat (connectAPN, "\"");
     // sets the APN, username and pw 
-    if (atCommandHelper (swSerial, connectAPN, "OK", "ERROR", 30000) == 1) {
+    if (atCommandHelper (serial, connectAPN, "OK", "ERROR", 30000) == 1) {
         Serial.println("ERROR: Setting up APN Connection failed.");
     }
 
     // Waits for status IP START
-	while (atCommandHelper(swSerial, "AT+CIPSTATUS", "START", "", 500) == 0);
+	while (atCommandHelper(serial, "AT+CIPSTATUS", "START", "", 500) == 0);
 	delay(5000);
 
     // Brings Up Wireless Connection with GPRS
-	if (atCommandHelper(swSerial, "AT+CIICR", "OK", "ERROR", 30000) != 1) {
+	if (atCommandHelper(serial, "AT+CIICR", "OK", "ERROR", 30000) != 1) {
         Serial.println("ERROR: Did not success with Wireles connection (GPRS)");
         return false;
     }
 
     // Waits for status. GPRRACT means that it has approved commands before it
-    while (atCommandHelper(swSerial, "AT+CIPSTATUS", "GPRSACT", "", 500) == 0);
+    while (atCommandHelper(serial, "AT+CIPSTATUS", "GPRSACT", "", 500) == 0);
     delay(5000);
 
     // Gets Local IP Address
-    if (atCommandHelper(swSerial, "AT+CIFSR", ".", "ERROR", 10000) != 1) {
+    if (atCommandHelper(serial, "AT+CIFSR", ".", "ERROR", 10000) != 1) {
         Serial.println("ERROR: Couldn't find local IP Address.");
         return false;
     } 
 
     // Waits for status IP STATUS
-    while (atCommandHelper(swSerial, "AT+CIPSTATUS", "IP STATUS", "", 500) == 0);
+    while (atCommandHelper(serial, "AT+CIPSTATUS", "IP STATUS", "", 500) == 0);
     delay(5000);
-    Serial.println("Openning TCP");
-
+    Serial.println("Opening TCP");
 
     char tcpSocketCommand [100] = {'\0'};
     strcat (tcpSocketCommand, "AT+CIPSTART=\"TCP\",\"");
@@ -114,7 +121,7 @@ bool connect(SoftwareSerial & swSerial, char* ipAddress) {
     strcat (tcpSocketCommand, "\",\"65000\"");
     
     // Opens a TCP socket
-    if (atCommandHelper(swSerial, tcpSocketCommand, "CONNECT OK", "CONNECT FAIL", 30000) != 1) {
+    if (atCommandHelper(serial, tcpSocketCommand, "CONNECT OK", "CONNECT FAIL", 30000) != 1) {
         Serial.println("ERROR: Could'nt open up TCP Socket.");
     }
     
@@ -124,7 +131,7 @@ bool connect(SoftwareSerial & swSerial, char* ipAddress) {
 }
 
 // GPS Data Handling
-bool sendGPSData(SoftwareSerial & swSerial, char* deviceName, char* gpsData) {
+bool sendGPSData(Stream & serial, char* deviceName, char* gpsData) {
     
     char sendDataCommand [50];
     char data [100] = {'\0'};
@@ -133,9 +140,9 @@ bool sendGPSData(SoftwareSerial & swSerial, char* deviceName, char* gpsData) {
     strcat (data, gpsData);
     // Sends some data to the TCP socket
     sprintf(sendDataCommand, "AT+CIPSEND=%d", strlen (data));
-    if (atCommandHelper(swSerial, sendDataCommand, ">", "ERROR", 10000) == 1)
+    if (atCommandHelper(serial, sendDataCommand, ">", "ERROR", 10000) == 1)
     {
-        atCommandHelper(swSerial, data, "SEND OK", "ERROR", 10000);
+        atCommandHelper(serial, data, "SEND OK", "ERROR", 10000);
     } else {
         Serial.println("ERROR: Couldn't send data to socket.");
         return false;
@@ -144,17 +151,14 @@ bool sendGPSData(SoftwareSerial & swSerial, char* deviceName, char* gpsData) {
     return true;
 }
 
-/*COMMANDS AND SOME INFO
+bool isConnected(Stream &serial)
+{
+    // Waits for status IP STATUS
+    if (atCommandHelper(serial, "AT+CIPSTATUS=?", "CONNECT OK", "", 500) != 1) {
+        Serial.println("Not connected");
+        return false;
+    }
 
-  AT+CGNSINF       // asks for gnss info
-  AT+CGPSSTATUS?    // connection status
-    4 responses; loc unknown, not fixed, 2d, 3d < 2d or 3d response next one 32
-  AT+CGPSOUT=32     // cordinates
-  AT+CGPSOUT=0    // no  cordinates
-  AT+CGPSRST=0    //
-  AT+CGNSTST=1    //
-  AT+CCLK?       //
-  AT+CFUN=0 or 1 or 4 // 0=minimum functionality 1=full functionality defaul 4 = flightmode disable RF
-  AT+COPS     //
-
-*/
+    Serial.println("Connection ok.");
+    return true;
+}
