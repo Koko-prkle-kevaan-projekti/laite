@@ -55,6 +55,13 @@ void atCommandResponse(Stream & serial, char *ATcommand, char *answer)
 
 // Connect to server
 bool connect(Stream & serial, char* ipAddress) {
+
+    // Disables cordinates until server connection is done 
+    if (atCommandHelper(serial, "AT+CGPSOUT=0", "OK", "", 2000) != 1) {
+        Serial.println("ERROR: disabling cordinates failed.");
+        return false;
+    }
+
     // checks if PIN code is required
     if (atCommandHelper(serial, "AT+CPIN?", "READY", "ERROR", 10000) != 1) {
         Serial.println("ERROR: cannot initialize SIM card");
@@ -67,7 +74,7 @@ bool connect(Stream & serial, char* ipAddress) {
 
     // connecting to the network 
     Serial.println("Network connection");
-    while (atCommandHelper(serial, "AT+CREG?", "+CREG: 0,1", "+CREG: 0,5", 1000) == 0);
+    while (atCommandHelper(serial, "AT+CREG?", "+CREG: 1,3", "+CREG: 5,3", 1000) == 0);
 
     // setting up single-IP connection mode
     if (atCommandHelper(serial, "AT+CIPMUX=0", "OK", "ERROR", 1000) != 1) {
@@ -126,6 +133,12 @@ bool connect(Stream & serial, char* ipAddress) {
     }
     
     Serial.println("Connected, well done!");
+
+    // Cordinates out
+    if (atCommandHelper(serial, "AT+CGPSOUT=32", "OK", "", 2000) != 1) {
+        Serial.println("ERROR: No cordinates");
+    }
+
 
     return true;
 }

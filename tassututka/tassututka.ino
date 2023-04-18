@@ -9,7 +9,7 @@
 #include "settings.h"
 
 #if ((defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)))
-  bool wlan = true;
+  bool wlan = true; // if want to try gprs with mega, change this value from true to false
   Stream & serial = Serial1; 
 #else
   bool wlan = false;
@@ -92,22 +92,6 @@ void powerOnSIM808(void)
 
 void enableGPS() 
 {
-
-/*COMMANDS AND SOME INFO
-  AT+CGNSINF       // asks for gnss info
-  AT+CGPSSTATUS?    // connection status
-    4 responses; loc unknown, not fixed, 2d, 3d < 2d or 3d response next one 32
-  AT+CGPSOUT=32     // cordinates
-  AT+CGPSOUT=0    // no  cordinates
-  AT+CGPSRST=0    //
-  AT+CGNSTST=1    //
-  AT+CCLK?       //
-  AT+CFUN=0 or 1 or 4 // 0=minimum functionality 1=full functionality defaul 4 = flightmode disable RF
-  AT+COPS     //
-*/
-
-// FLIGHT MODE: 4 - for stabilizing the power. 
-// GPS works normally and doesnt break all the time because of all shit
 
 // Waiting for phone functionality to be done
   while (atCommandHelper(serial, "AT+CFUN=1", "OK", "ERROR", 3000) != 1);
